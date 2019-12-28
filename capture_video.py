@@ -133,7 +133,10 @@ while (True):
         ball_pos.append([x, y])
     print("ball_pos",ball_pos)
     #######################
-    for pos in range(len(ball_pos))
+    print("重心座標")
+    for number in range(len(ball_pos)):
+        print(ball_pos[0])
+        cv2.circle(frame, tuple(ball_pos[number]), 15, (0, 0, 255), thickness=1)
     #加工なし画像を表示する
     cv2.imshow('Moment Frame', frame)
     #マスクをかける
