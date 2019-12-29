@@ -42,7 +42,7 @@ while True:
 
 # キャプチャをリリースして、ウィンドウをすべて閉じる
 cap.release()
-#cv2.destroyAllWindows()
+cv2.destroyAllWindows()
 print("背景撮影完了")
 ###########################################################################################
 
@@ -101,7 +101,7 @@ while (True):
     areas = []
     for cnt in contours:#cnt:輪郭#輪郭の数だけループする
         area = cv2.contourArea(cnt)#cv2.contourArea(cnt):領域が占める面積を計算
-        if area > 300:#輪郭の面積が5000以上の場合、リストに追加する
+        if area > 200:#輪郭の面積が5000以上の場合、リストに追加する
             epsilon = 0.1*cv2.arcLength(cnt,True)
             #領域を囲む周囲長を計算する
             #第二引数は対象とする領域が閉じている(True)か単なる曲線かを表すフラグ
@@ -149,7 +149,7 @@ while (True):
         x = int(x)
         y = int(y)
         ball_pos.append([x, y])
-    print("ball_pos"+str(ball_pos)+'\n')
+    print("ball_pos:"+str(ball_pos))
 
 #######################
     print("重心座標")
@@ -194,14 +194,17 @@ while (True):
     #cv2.imshow('bitwise_and',bitwise_and)
 
     #キー入力を1ms待って、k がpだったらBreakする
-    k = cv2.waitKey(1)&0xff # キー入力を待つ
+    k = cv2.waitKey(100)&0xff # キー入力を待つ
+    now = datetime.now()
+    print(str(now)+"\n")
+    
     if k == ord('p'):
         # 「p」キーで画像を保存
         date = datetime.now().strftime("%Y%m%d_%H%M%S")
         path = "/home/pi/" + "moment" + date + ".png"
         cv2.imwrite(path, frame) # ファイル保存
 
-        cv2.imshow(path, frame) # キャプチャした画像を表示
+        
         
         break
 print("output:{}".format(output))
@@ -209,4 +212,5 @@ print("output:{}".format(output))
 cap.release()
 #cv2.destroyAllWindows()
 print("終了")
+
 ################################################
