@@ -17,6 +17,14 @@ print(version)
 #2.4.9.1
 
 cap = cv2.VideoCapture(0)
+
+fps =30
+size = (640, 480)
+
+#set video.file
+
+
+########################
 t_pre = time.time()
 #backgroundを任意のタイミングで撮影する
 while True:
@@ -76,7 +84,7 @@ while (True):
     #差分検出
     color_diff_ini = cv2.absdiff(gray1, gray_background)
     #閾値処理
-    retval, black_diff = cv2.threshold(color_diff_ini, 50, 255, cv2.THRESH_BINARY)
+    retval, black_diff = cv2.threshold(color_diff_ini, 30, 255, cv2.THRESH_BINARY)
     
     #加工ありの画像を表示    
     cv2.imshow('black_diff',black_diff)
@@ -178,6 +186,7 @@ while (True):
             moment = np_ball_pos[number]
             #cv2.arrowedLine(frame, tuple(np_ball_pre[number]),tuple(np_ball_pos[number]), (0, 0, 255), thickness=1)
             #cv2.drawMarker(frame, tuple(np_ball_pos[number]), (0, 0, 255))
+            #probably can't use arrowedLine, drawMarker
             cv2.circle(frame, tuple(np_ball_pos[number]), 15, (0, 0, 255), thickness=1)    
     
     #if not match detect number of balls 
@@ -196,7 +205,9 @@ while (True):
 ####################################################
     #加工なし画像を表示する
     cv2.imshow('Moment Frame', frame)
-    #マスクをかける
+    
+    #save video
+    #video.write(frame)
 
     #bitwise_and = cv2.bitwise_and(gray1, black_diff)
     #加工ありの画像を表示    
