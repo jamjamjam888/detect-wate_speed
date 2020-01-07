@@ -1,3 +1,5 @@
+#参照:https://helloidea.org/index.php/archives/1925.html
+
 #!/usr/bin/env python
 #coding:utf-8
 
@@ -72,8 +74,15 @@ Height = int(cap.get(4))
 #print("(Width,Height):",Width,Heihgt)
 
 #コーデックを定義しVideoWriter Objectを生成
-fourcc = cv2.cv.CV_FOURCC(*"XVID")
-out = cv2.VideoWriter("output_"+date+".mp4", fourcc, 50, (Width,Height))
+
+#ver 2.4.3
+#fourcc = cv2.CV_FOURCC(*"XVID")
+
+#fps
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+print("fps:",fps)
+fourcc = cv2.VideoWriter_fourcc('m', 'p', '4','v')
+out = cv2.VideoWriter("output_"+date+".mp4", fourcc, fps, (Width,Height))
 
 ###参照###
     # CV_FOURCC('D','I','B',' ')    = 無圧縮
@@ -113,7 +122,7 @@ while (True):
     retval, black_diff = cv2.threshold(color_diff_ini, 80, 255, cv2.THRESH_BINARY)
     """
     #write video on raspi
-    out.write(black_diff)
+    #out.write(black_diff)
     """
     #加工ありの画像を表示    
     cv2.imshow('black_diff',black_diff)
@@ -195,7 +204,8 @@ while (True):
     
 
 #######################calcurate diff#######################################
-    #ball_pre
+    
+     #ball_pre
     print("\n"+"ball_pre"+"\n"+str(ball_pre))
     
     if len(np_ball_pos) == len(ball_pre):
@@ -221,7 +231,7 @@ while (True):
     else:
         vector = []
         print("error")
-        #only write moment
+         #only write moment
         for number in range(len(np_ball_pos)):
             moment = np_ball_pos[number]
             #cv2.drawMarker(frame, tuple(np_ball_pos[number]), (0, 0, 255))
@@ -282,4 +292,3 @@ out.release()
 print("終了")
 
 ################################################
-
