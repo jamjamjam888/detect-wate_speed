@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 #coding:utf-8
 
-#ラズパイカメラをマウントしてusbカメラにするコマンド
-#sudo modprobe bcm2835-v4l2
+#(備考)
+#cv2.getBuildInformation()でViedoI/Oが有効化されているか確認。「FFMPEG」が有効ならok!
 
-#usbカメラで動かすことに成功
+
 import time
 from time import sleep
 import math
@@ -12,17 +12,12 @@ import cv2
 import numpy as np
 from datetime import datetime
 
+#versino確認
 version =cv2.__version__
 print(version)
 #2.4.9.1
-
+#captureクラスの呼び出し
 cap = cv2.VideoCapture(0)
-
-fps =30
-size = (640, 480)
-
-#set video.file
-
 
 ########################
 t_pre = time.time()
@@ -58,8 +53,39 @@ print("背景撮影完了")
 background = cv2.imread("/home/pi/background" +date+ ".ping",1)
 #gray_background = cv2.cvtColor(background, cv2.COLOR_BGR2GRAY)
 
+#移動量を書き込むテキストファイルを生成し日付を書き込む
+f = open("/home/pi/vector_info_"+date+".txt","w")
+f.write(str(date)+'\n')
+f.close()
+
 #フレーム間差分を計算
 cap = cv2.VideoCapture(0)
+
+###動画撮影設定###
+"""
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+print("fps:",fps)
+"""
+Width = int(cap.get(3))
+Height = int(cap.get(4))
+
+#print("(Width,Height):",Width,Heihgt)
+
+#コーデックを定義しVideoWriter Objectを生成
+fourcc = cv2.cv.CV_FOURCC(*"XVID")
+out = cv2.VideoWriter("output_"+date+".mp4", fourcc, 50, (Width,Height))
+
+###参照###
+    # CV_FOURCC('D','I','B',' ')    = 無圧縮
+    # CV_FOURCC('P','I','M','1')    = MPEG-1 codec
+    # CV_FOURCC('M','J','P','G')    = motion-jpeg codec (does not work well)
+    # CV_FOURCC('M', 'P', '4', '2') = MPEG-4.2 codec
+    # CV_FOURCC('D', 'I', 'V', '3') = MPEG-4.3 codec
+    # CV_FOURCC('D', 'I', 'V', 'X') = MPEG-4 codec
+    # CV_FOURCC('U', '2', '6', '3') = H263 codec
+    # CV_FOURCC('I', '2', '6', '3') = H263I codec
+    # CV_FOURCC('F', 'L', 'V', '1') = FLV1 codec
+########
 
 #distance_lapse
 output = []
@@ -84,11 +110,16 @@ while (True):
     #差分検出
     color_diff_ini = cv2.absdiff(gray1, gray_background)
     #閾値処理
-    retval, black_diff = cv2.threshold(color_diff_ini, 30, 255, cv2.THRESH_BINARY)
-    
+    retval, black_diff = cv2.threshold(color_diff_ini, 80, 255, cv2.THRESH_BINARY)
+    """
+    #write video on raspi
+    out.write(black_diff)
+    """
     #加工ありの画像を表示    
     cv2.imshow('black_diff',black_diff)
+
     
+
     #################################################################
     #重心を計算
     contours, hierarchy = cv2.findContours(black_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -109,7 +140,7 @@ while (True):
     areas = []
     for cnt in contours:#cnt:輪郭#輪郭の数だけループする
         area = cv2.contourArea(cnt)#cv2.contourArea(cnt):領域が占める面積を計算
-        if area > 200:#輪郭の面積が5000以上の場合、リストに追加する
+        if area > 200:#輪郭の面積がthreshold以上の場合、リストに追加する
             epsilon = 0.1*cv2.arcLength(cnt,True)
             #領域を囲む周囲長を計算する
             #第二引数は対象とする領域が閉じている(True)か単なる曲線かを表すフラグ
@@ -136,13 +167,8 @@ while (True):
         approxCurve: 近似した輪郭
         """
         approx_contours.append(approx_cnt)
-        # 元の輪郭及び近似した輪郭の点の数を表示する。
-        #print("contour {}: {} -> {}".format(i, len(cnt), len(approx_cnt)))
-    #print(approx_contours)
-    #流体を描画
-    cv2.drawContours(frame,approx_contours,-1,(0,0,255),1)
-    
-    #重心を描画
+        
+        #重心を描画
     ball_pos = []
     for i in range(len(approx_contours)):  #重心位置を計算
         count = len(approx_contours[i])
@@ -157,8 +183,16 @@ while (True):
         x = int(x)
         y = int(y)
         ball_pos.append([x, y])
+        #重心座標を書き込む
+        ball_position = (x,y)
+        cv2.putText(frame, str(0), ball_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))        
+        
+        
     np_ball_pos = np.array(ball_pos)
     print("moment:\n"+str(np_ball_pos))
+    
+    
+    
 
 #######################calcurate diff#######################################
     #ball_pre
@@ -176,11 +210,6 @@ while (True):
         #calcurate vector
         vector = diff/t_lapse
         print("\n"+"vector"+"\n"+str(vector))
-        
-        #write vector_info on the livevideo
-        position = (50,50)
-        cv2.putText(frame, str(vector), position, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0))
-        
         #write moment + vector on the livevideo
         for number in range(len(np_ball_pos)):
             moment = np_ball_pos[number]
@@ -189,20 +218,32 @@ while (True):
             #probably can't use arrowedLine, drawMarker
             cv2.circle(frame, tuple(np_ball_pos[number]), 15, (0, 0, 255), thickness=1)    
     
-    #if not match detect number of balls 
     else:
+        vector = []
         print("error")
         #only write moment
         for number in range(len(np_ball_pos)):
             moment = np_ball_pos[number]
             #cv2.drawMarker(frame, tuple(np_ball_pos[number]), (0, 0, 255))
-            cv2.circle(frame, tuple(np_ball_pos[number]), 15, (0, 0, 255), thickness=1)
+            #cv2.circle(frame, tuple(np_ball_pos[number]), 15, (0, 0, 255), thickness=1)
     
+    #write vector_info on the livevideo
+    position1 = (50,50)
+    cv2.putText(frame, str(vector), position1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0))
+        
+        
+    #write boll_position
+    position2 = (50,100)
+    cv2.putText(frame, str(ball_pos), position2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0))
+
     #get pre_info
     ball_pre = np_ball_pos
     t_pre = time.time()
 
 ####################################################
+    #write video on raspi
+    out.write(frame)
+    
     #加工なし画像を表示する
     cv2.imshow('Moment Frame', frame)
     
@@ -212,6 +253,12 @@ while (True):
     #bitwise_and = cv2.bitwise_and(gray1, black_diff)
     #加工ありの画像を表示    
     #cv2.imshow('bitwise_and',bitwise_and)
+    
+    #vectorをtexifielに書き込む
+    #textfile作成
+    f = open("/home/pi/vector_info_"+date+".txt","a")
+    f.write(str(vector)+'\n')
+    f.close()
 
     #キー入力を1ms待って、k がpだったらBreakする
     k = cv2.waitKey(100)&0xff # キー入力を待つ
@@ -230,6 +277,7 @@ while (True):
 print("output:{}".format(output))
 # キャプチャをリリースして、ウィンドウをすべて閉じる
 cap.release()
+out.release()
 #cv2.destroyAllWindows()
 print("終了")
 
