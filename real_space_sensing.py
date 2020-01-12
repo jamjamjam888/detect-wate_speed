@@ -55,23 +55,22 @@ while True:
     print(img_array)
     print(img_array.shape)
     """
-    #gray_background = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    background = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     #cv2.imshow("background_capture", gray_background)
 
-    k = cv2.waitKey(1)&0xff # キー入力を待つ
+    k = cv2.waitKey(10)&0xff # キー入力を待つ
     if k == ord('p'):
         # 「p」キーで画像を保存
         date = datetime.now().strftime("%Y%m%d_%H%M%S")
         path = "C:\Users\owner\Desktop\watanabe\VLC\input\capture" + date + ".png"
         cv2.imwrite(path, frame) # ファイル保存
-
         cv2.imshow(path, frame) # キャプチャした画像を表示
         break
 
 # キャプチャをリリースして、ウィンドウをすべて閉じる
 cap.release()
 cv2.destroyAllWindows()
-print("背景撮影完了")
+print("capture background")
 ###########################################################################################
 
 #backgroundを読み込む
@@ -82,17 +81,20 @@ background = cv2.imread("C:\Users\owner\Desktop\watanabe\VLC\input\capture" +dat
 cap = cv2.VideoCapture(2)
 
 ###動画撮影設定###
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2160)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1920)
 Width = int(cap.get(3))
 Height = int(cap.get(4))
 print("(Width,Heihgt):",Width,Height)
-#print("(Width,Height):",Width,Heihgt)
+windowsize = (800, 800)
 
 #fps
+"""
 fps = int(cap.get(cv2.CAP_PROP_FPS))
 print("fps:",fps)
 fourcc = cv2.VideoWriter_fourcc('m', 'p', '4','v')
 out = cv2.VideoWriter("output_"+date+".mp4", fourcc, fps, (Width,Height))
-
+"""
 ###参照###
     # CV_FOURCC('D','I','B',' ')    = 無圧縮
     # CV_FOURCC('P','I','M','1')    = MPEG-1 codec
@@ -104,29 +106,18 @@ out = cv2.VideoWriter("output_"+date+".mp4", fourcc, fps, (Width,Height))
     # CV_FOURCC('I', '2', '6', '3') = H263I codec
     # CV_FOURCC('F', 'L', 'V', '1') = FLV1 codec
 ########
-
-#distance_lapse
-output = []
-ball_pre = []
+print("realtime-sensing")
 while (True):
-
     #VideoCaptureから1フレーム読み込む
     ret, frame = cap.read()
-    """
-    #配列を確認
-    print("配列を確認")
-    print(type(frame))
-    img_array = np.asarray(frame) #numpyで扱える配列をつくる
-    print(img_array)
-    print(img_array.shape)
-    """
-    gray1 = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
+    print(ret)
+    frame = cv2.resize(frame, windowsize)
     #加工ありの画像を表示    
-    #cv2.imshow('Gray Frame',gray1)
-    
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    cv2.imshow('Gray Frame',frame)
+    sleep(100)
     #差分検出
-    color_diff_ini = cv2.absdiff(gray1, gray_background)
+    color_diff_ini = cv2.absdiff(frame, background)
     #閾値処理
     retval, black_diff = cv2.threshold(color_diff_ini, 80, 255, cv2.THRESH_BINARY)
     """
@@ -139,10 +130,10 @@ while (True):
     
 
     #write video on raspi
-    out.write(frame)
+    #out.write(frame)
     
     #加工なし画像を表示する
-    cv2.imshow('Moment Frame', frame)
+    #cv2.imshow('Moment Frame', frame)
     
     #save video
     #video.write(frame)
@@ -153,9 +144,11 @@ while (True):
     
     #vectorをtexifielに書き込む
     #textfile作成
+    """
     f = open("/home/pi/vector_info_"+date+".txt","a")
     f.write(str(vector)+'\n')
     f.close()
+    """
 
     #キー入力を1ms待って、k がpだったらBreakする
     k = cv2.waitKey(100)&0xff # キー入力を待つ
