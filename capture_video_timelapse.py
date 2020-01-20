@@ -1,3 +1,5 @@
+#参照:https://helloidea.org/index.php/archives/1925.html
+
 #!/usr/bin/env python
 #coding:utf-8
 
@@ -62,17 +64,31 @@ f.close()
 cap = cv2.VideoCapture(0)
 
 ###動画撮影設定###
-Width = int(cap.get(3))
-Height = int(cap.get(4))
-print("(Width,Heihgt):",Width,Height)
-#print("(Width,Height):",Width,Heihgt)
-
-#fps
+"""
 fps = int(cap.get(cv2.CAP_PROP_FPS))
 print("fps:",fps)
+"""
+Width = int(cap.get(3))
+Height = int(cap.get(4))
+
+#print("(Width,Height):",Width,Heihgt)
+
+#コーデックを定義しVideoWriter Objectを生成
+
+#ver 2.4.3
+#fourcc = cv2.CV_FOURCC(*"XVID")
+
+#fps
+#fps取得
+#fps = int(cap.get(cv2.CAP_PROP_FPS))
+#fps設定
+cap.set(cv2.CAP_PROP_FPS, 1)
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+print("fps:",fps)
+"""
 fourcc = cv2.VideoWriter_fourcc('m', 'p', '4','v')
 out = cv2.VideoWriter("output_"+date+".mp4", fourcc, fps, (Width,Height))
-
+"""
 ###参照###
     # CV_FOURCC('D','I','B',' ')    = 無圧縮
     # CV_FOURCC('P','I','M','1')    = MPEG-1 codec
@@ -111,7 +127,7 @@ while (True):
     retval, black_diff = cv2.threshold(color_diff_ini, 80, 255, cv2.THRESH_BINARY)
     """
     #write video on raspi
-    out.write(black_diff)
+    #out.write(black_diff)
     """
     #加工ありの画像を表示    
     cv2.imshow('black_diff',black_diff)
@@ -182,8 +198,8 @@ while (True):
         y = int(y)
         ball_pos.append([x, y])
         #重心座標を書き込む
-        #ball_position = (x,y)
-        #cv2.putText(frame, str(0), ball_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))        
+        ball_position = (x,y)
+        cv2.putText(frame, str(0), ball_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))        
         
         
     np_ball_pos = np.array(ball_pos)
@@ -193,37 +209,55 @@ while (True):
     
 
 #######################calcurate diff#######################################
-    #ball_pre
+    
+     #ball_pre
     print("\n"+"ball_pre"+"\n"+str(ball_pre))
     
+    #速度を格納するための配列を生成する
+    vector = []
+    #画像上での検知した個数がフレームの前後で同じときだけ移動量を計算する
     if len(np_ball_pos) == len(ball_pre):
         np_ball_pre = np.array(ball_pre)
+        #画像上での移動量。Δx=diff[0],Δy=diff[1]
         diff = np_ball_pos - np_ball_pre
         print("\n"+"diff"+"\n"+str(diff))
         
         #calcurate time_lapse
-        t_now = time.time()
-        t_lapse = t_now - t_pre
+        #fpsを計算する。fpsを自分で設定してもよい。今回はfps=30で行ったのでそれを用いた
+        #t_now = time.time()
+        #t_lapse = t_now - t_pre
         
+        if len(diff) != 0:#配列の中身が空じゃないとき
         #calcurate vector
-        vector = diff/t_lapse
-        print("\n"+"vector"+"\n"+str(vector))
+        #280mmm:58pxl = 4.8mm:1pxl
+        #現実での移動量=比例定数*画像上での移動量.
+        #ただし、高さ28cm
+            diff_list = diff.tolist()
+            print("diff_list",diff_list)
+        
+            real_x = round(diff_list[0][0]*4.8)
+            real_y = round(diff_list[0][1]*4.8)
+            print(real_x,real_y)
+        #絶対値の2乗計算
+            x_abs = abs(real_x)
+            y_abs = abs(real_y)
+            cal = x_abs**2 + y_abs**2
+            
+        #√abs*fps(30)
+            vector = (round(np.sqrt(cal)))
+            print("\n"+"vector"+"\n"+str(vector))
         #write moment + vector on the livevideo
-        for number in range(len(np_ball_pos)):
-            moment = np_ball_pos[number]
-            #cv2.arrowedLine(frame, tuple(np_ball_pre[number]),tuple(np_ball_pos[number]), (0, 0, 255), thickness=1)
-            #cv2.drawMarker(frame, tuple(np_ball_pos[number]), (0, 0, 255))
-            #probably can't use arrowedLine, drawMarker
-            cv2.circle(frame, tuple(np_ball_pos[number]), 15, (0, 0, 255), thickness=1)    
+            for number in range(len(np_ball_pos)):
+                moment = np_ball_pos[number]
+                cv2.circle(frame, tuple(np_ball_pos[number]), 15, (0, 0, 255), thickness=1)    
     
     else:
-        vector = []
+        
         print("error")
-        #only write moment
+         #only write moment
         for number in range(len(np_ball_pos)):
             moment = np_ball_pos[number]
-            
-            cv2.drawMarker(frame, tuple(np_ball_pos[number]), (0, 0, 255))
+            #cv2.drawMarker(frame, tuple(np_ball_pos[number]), (0, 0, 255))
             #cv2.circle(frame, tuple(np_ball_pos[number]), 15, (0, 0, 255), thickness=1)
     
     #write vector_info on the livevideo
@@ -241,7 +275,8 @@ while (True):
 
 ####################################################
     #write video on raspi
-    out.write(frame)
+    #ラズパイに書き込む場合は↓これをつかう
+    #out.write(frame)
     
     #加工なし画像を表示する
     cv2.imshow('Moment Frame', frame)
@@ -269,16 +304,15 @@ while (True):
         date = datetime.now().strftime("%Y%m%d_%H%M%S")
         path = "/home/pi/" + "moment" + date + ".png"
         cv2.imwrite(path, frame) # ファイル保存
+
         
-        print("output:{}".format(output))
         # キャプチャをリリースして、ウィンドウをすべて閉じる
         cap.release()
-        out.release()
+        #out.release()
         cv2.destroyAllWindows()
-        
         break
-print("output:{}".format(output))
+
+#print("output:{}".format(output))
 print("終了")
 
 ################################################
-
